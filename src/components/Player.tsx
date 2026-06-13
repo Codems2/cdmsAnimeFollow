@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   recordWatch,
   setPreferredServer,
@@ -8,6 +8,17 @@ import {
   type AnimeRef,
 } from "@/lib/library";
 import type { FlvServer } from "@/types/animeflv";
+
+// La Fullscreen API aún no está totalmente sin prefijos en Safari/iOS y algunos
+// Android, así que declaramos las variantes `webkit` que usamos como fallback.
+type DocumentWithWebkitFullscreen = Document & {
+  webkitFullscreenElement?: Element | null;
+  webkitExitFullscreen?: () => void;
+};
+
+type ElementWithWebkitFullscreen = HTMLElement & {
+  webkitRequestFullscreen?: () => void;
+};
 
 export function Player({
   servers,
@@ -24,11 +35,63 @@ export function Player({
   const preferred = usePreferredServer();
   const [active, setActive] = useState<number | null>(null);
 
+  // Contenedor del reproductor: sobre él pedimos la pantalla completa.
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
   // Al abrir el episodio: registrar en historial y marcar como visto.
   useEffect(() => {
     recordWatch(anime, episode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [anime.slug, episode]);
+
+  // Mantener el estado sincronizado con el navegador (tecla Esc, gestos, etc.).
+  useEffect(() => {
+    function onChange() {
+      const fsEl =
+        document.fullscreenElement ??
+        // Safari (escritorio y algunos Android) usa el prefijo webkit.
+        (document as DocumentWithWebkitFullscreen).webkitFullscreenElement ??
+        null;
+      setIsFullscreen(Boolean(fsEl));
+    }
+    document.addEventListener("fullscreenchange", onChange);
+    document.addEventListener("webkitfullscreenchange", onChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onChange);
+      document.removeEventListener("webkitfullscreenchange", onChange);
+    };
+  }, []);
+
+  const toggleFullscreen = useCallback(async () => {
+    const el = containerRef.current as ElementWithWebkitFullscreen | null;
+    if (!el) return;
+
+    const doc = document as DocumentWithWebkitFullscreen;
+    const isActive = Boolean(doc.fullscreenElement ?? doc.webkitFullscreenElement);
+
+    try {
+      if (!isActive) {
+        if (el.requestFullscreen) {
+          await el.requestFullscreen();
+        } else if (el.webkitRequestFullscreen) {
+          // Safari de escritorio y Chrome antiguo de Android.
+          el.webkitRequestFullscreen();
+        } else {
+          // iOS Safari no permite pantalla completa sobre un iframe: avisamos.
+          alert(
+            "Tu navegador no permite la pantalla completa aquí. Usa el botón de pantalla completa del propio reproductor del vídeo."
+          );
+        }
+      } else if (doc.exitFullscreen) {
+        await doc.exitFullscreen();
+      } else if (doc.webkitExitFullscreen) {
+        doc.webkitExitFullscreen();
+      }
+    } catch {
+      // Algunos navegadores rechazan la promesa si el gesto no es válido; lo ignoramos.
+    }
+  }, []);
 
   if (embeddable.length === 0) {
     return (
@@ -50,7 +113,11 @@ export function Player({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/50 ring-1 ring-white/10">
+      <div
+        ref={containerRef}
+        className="group relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/50 ring-1 ring-white/10 data-[fs=true]:aspect-auto data-[fs=true]:h-full data-[fs=true]:w-full data-[fs=true]:rounded-none"
+        data-fs={isFullscreen}
+      >
         <iframe
           // El cambio de `key` fuerza recargar el iframe al cambiar de servidor.
           key={current.embed}
@@ -60,6 +127,44 @@ export function Player({
           allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
           allowFullScreen
         />
+
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          aria-label={
+            isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"
+          }
+          title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+          className="absolute bottom-3 right-3 z-10 grid h-10 w-10 place-items-center rounded-full bg-black/60 text-white ring-1 ring-white/20 backdrop-blur transition hover:bg-black/80 active:scale-95"
+        >
+          {isFullscreen ? (
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-5 w-5"
+              aria-hidden="true"
+            >
+              <path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3" />
+            </svg>
+          ) : (
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-5 w-5"
+              aria-hidden="true"
+            >
+              <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3M21 16v3a2 2 0 0 1-2 2h-3" />
+            </svg>
+          )}
+        </button>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
