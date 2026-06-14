@@ -106,7 +106,46 @@ const streamtape: Extractor = {
   },
 };
 
-const EXTRACTORS: Extractor[] = [yourupload, streamtape];
+// ── Okru (ok.ru / OK Video) ──────────────────────────────────────────────────
+// El embed es un shell JS; los metadatos se piden a su endpoint, que devuelve
+// JSON con las calidades mp4 (`videos`) y/o un manifiesto HLS. Devuelve null si
+// el vídeo está restringido por copyright (frecuente en títulos populares).
+const okru: Extractor = {
+  id: "Okru",
+  match: (e) => /ok\.ru|odnoklassniki/i.test(e),
+  async resolve(embed) {
+    const mid = embed.match(/(?:videoembed|video)\/(\d+)/)?.[1];
+    if (!mid) return null;
+    const res = await fetch(`https://ok.ru/dk?cmd=videoPlayerMetadata&mid=${mid}`, {
+      method: "POST",
+      headers: { "User-Agent": UA, Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      error?: string;
+      videos?: { name: string; url: string }[];
+      hlsManifestUrl?: string;
+    };
+    if (data.error) return null;
+
+    // Preferimos el mp4 de mayor calidad; si no hay, usamos el HLS.
+    const order = ["mobile", "lowest", "low", "sd", "hd", "full", "quad", "ultra"];
+    const best = (data.videos ?? [])
+      .filter((v) => v.url)
+      .sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name))
+      .pop();
+    if (best) {
+      return { url: absolutize(best.url.replace(/\\u0026/g, "&"), embed), type: "mp4" };
+    }
+    if (data.hlsManifestUrl) {
+      return { url: data.hlsManifestUrl.replace(/\\u0026/g, "&"), type: "hls" };
+    }
+    return null;
+  },
+};
+
+const EXTRACTORS: Extractor[] = [yourupload, okru, streamtape];
 
 /**
  * Intenta resolver la URL de embed a un stream directo reproducible.
