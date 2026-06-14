@@ -8,7 +8,11 @@ import {
   type AnimeRef,
 } from "@/lib/library";
 import type { FlvServer } from "@/types/animeflv";
-import type { ResolvedStream } from "@/lib/extractors";
+import {
+  isExtractable,
+  pickBestExtractable,
+  type ResolvedStream,
+} from "@/lib/extractors";
 import { NativePlayer } from "@/components/NativePlayer";
 
 // La Fullscreen API aún no está totalmente sin prefijos en Safari/iOS y algunos
@@ -94,9 +98,14 @@ export function Player({
     }
   }, []);
 
-  // Si el usuario no ha elegido, usamos su servidor preferido (o el primero).
+  // Por defecto preferimos un servidor extraíble: así sale el <video> nativo
+  // con Chromecast/AirPlay (y sin emergentes) sin que el usuario tenga que
+  // cambiar de servidor a mano. Orden: elección de esta sesión → preferido
+  // guardado → mejor extraíble → primero.
   const preferredIndex = embeddable.findIndex((s) => s.name === preferred);
-  const activeIndex = active ?? (preferredIndex >= 0 ? preferredIndex : 0);
+  const bestExtractable = pickBestExtractable(embeddable.map((s) => s.embed));
+  const activeIndex =
+    active ?? (preferredIndex >= 0 ? preferredIndex : bestExtractable ?? 0);
   const current =
     embeddable.length > 0
       ? embeddable[Math.min(activeIndex, embeddable.length - 1)]
@@ -214,7 +223,12 @@ export function Player({
             key={`${s.name}-${i}`}
             type="button"
             onClick={() => selectServer(i)}
-            className={`rounded-full px-4 py-1.5 text-xs font-medium transition active:scale-95 ${
+            title={
+              isExtractable(s.embed)
+                ? "Permite lanzar a la TV (Chromecast/AirPlay)"
+                : undefined
+            }
+            className={`inline-flex items-center gap-1 rounded-full px-4 py-1.5 text-xs font-medium transition active:scale-95 ${
               i === activeIndex
                 ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-500/30"
                 : "bg-white/10 text-white/70 ring-1 ring-white/10 hover:bg-white/20 hover:text-white"
@@ -222,6 +236,21 @@ export function Player({
           >
             {s.name}
             {s.name === preferred && i !== activeIndex ? " ★" : ""}
+            {isExtractable(s.embed) && (
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-3.5 w-3.5 opacity-80"
+                aria-label="Permite lanzar a la TV"
+              >
+                <rect x="2" y="7" width="20" height="13" rx="2" />
+                <polyline points="8 3 12 7 16 3" />
+              </svg>
+            )}
           </button>
         ))}
       </div>

@@ -120,6 +120,22 @@ export async function resolveStream(embed: string): Promise<ResolvedStream | nul
 }
 
 /** ¿Tenemos *en teoría* un extractor para esta URL? (No garantiza que funcione.) */
-export function isExtractable(embed: string): boolean {
-  return EXTRACTORS.some((x) => x.match(embed));
+export function isExtractable(embed: string | undefined): boolean {
+  return Boolean(embed) && EXTRACTORS.some((x) => x.match(embed!));
+}
+
+/**
+ * Dado un listado de embeds, devuelve el índice del mejor servidor extraíble
+ * (por orden de fiabilidad de los extractores: el primero del registro gana),
+ * o `null` si ninguno es extraíble. Sirve para que el reproductor elija por
+ * defecto un servidor que permita <video> nativo + Chromecast/AirPlay.
+ */
+export function pickBestExtractable(
+  embeds: (string | undefined)[],
+): number | null {
+  for (const x of EXTRACTORS) {
+    const idx = embeds.findIndex((e) => e && x.match(e));
+    if (idx >= 0) return idx;
+  }
+  return null;
 }
