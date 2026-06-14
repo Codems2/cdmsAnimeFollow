@@ -68,6 +68,10 @@ const yourupload: Extractor = {
   match: (e) => /yourupload\.com/i.test(e),
   async resolve(embed) {
     const html = await fetchText(embed);
+    // Vídeo retirado/bloqueado (DMCA o geo): no hay stream que extraer.
+    if (/content restricted|dmca complaint|video not found/i.test(html)) {
+      return null;
+    }
     const m =
       html.match(/file:\s*'([^']+\.mp4[^']*)'/i) ??
       html.match(/file:\s*"([^"]+\.mp4[^"]*)"/i);
@@ -120,6 +124,6 @@ export async function resolveStream(embed: string): Promise<ResolvedStream | nul
 }
 
 /** ¿Tenemos *en teoría* un extractor para esta URL? (No garantiza que funcione.) */
-export function isExtractable(embed: string): boolean {
-  return EXTRACTORS.some((x) => x.match(embed));
+export function isExtractable(embed: string | undefined): boolean {
+  return Boolean(embed) && EXTRACTORS.some((x) => x.match(embed!));
 }
