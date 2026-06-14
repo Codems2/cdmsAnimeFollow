@@ -68,6 +68,10 @@ const yourupload: Extractor = {
   match: (e) => /yourupload\.com/i.test(e),
   async resolve(embed) {
     const html = await fetchText(embed);
+    // Vídeo retirado/bloqueado (DMCA o geo): no hay stream que extraer.
+    if (/content restricted|dmca complaint|video not found/i.test(html)) {
+      return null;
+    }
     const m =
       html.match(/file:\s*'([^']+\.mp4[^']*)'/i) ??
       html.match(/file:\s*"([^"]+\.mp4[^"]*)"/i);
@@ -122,20 +126,4 @@ export async function resolveStream(embed: string): Promise<ResolvedStream | nul
 /** ¿Tenemos *en teoría* un extractor para esta URL? (No garantiza que funcione.) */
 export function isExtractable(embed: string | undefined): boolean {
   return Boolean(embed) && EXTRACTORS.some((x) => x.match(embed!));
-}
-
-/**
- * Dado un listado de embeds, devuelve el índice del mejor servidor extraíble
- * (por orden de fiabilidad de los extractores: el primero del registro gana),
- * o `null` si ninguno es extraíble. Sirve para que el reproductor elija por
- * defecto un servidor que permita <video> nativo + Chromecast/AirPlay.
- */
-export function pickBestExtractable(
-  embeds: (string | undefined)[],
-): number | null {
-  for (const x of EXTRACTORS) {
-    const idx = embeds.findIndex((e) => e && x.match(e));
-    if (idx >= 0) return idx;
-  }
-  return null;
 }

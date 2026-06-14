@@ -8,11 +8,7 @@ import {
   type AnimeRef,
 } from "@/lib/library";
 import type { FlvServer } from "@/types/animeflv";
-import {
-  isExtractable,
-  pickBestExtractable,
-  type ResolvedStream,
-} from "@/lib/extractors";
+import { isExtractable, type ResolvedStream } from "@/lib/extractors";
 import { NativePlayer } from "@/components/NativePlayer";
 
 // La Fullscreen API aún no está totalmente sin prefijos en Safari/iOS y algunos
@@ -98,14 +94,13 @@ export function Player({
     }
   }, []);
 
-  // Por defecto preferimos un servidor extraíble: así sale el <video> nativo
-  // con Chromecast/AirPlay (y sin emergentes) sin que el usuario tenga que
-  // cambiar de servidor a mano. Orden: elección de esta sesión → preferido
-  // guardado → mejor extraíble → primero.
+  // Si el usuario no ha elegido, usamos su servidor preferido (o el primero).
+  // NO forzamos un servidor extraíble por defecto: hosts como YourUpload suelen
+  // tener el contenido restringido (DMCA/geo) y dejarían al usuario en una
+  // página de bloqueo. El casting queda como opción al elegir el servidor con
+  // el icono de TV.
   const preferredIndex = embeddable.findIndex((s) => s.name === preferred);
-  const bestExtractable = pickBestExtractable(embeddable.map((s) => s.embed));
-  const activeIndex =
-    active ?? (preferredIndex >= 0 ? preferredIndex : bestExtractable ?? 0);
+  const activeIndex = active ?? (preferredIndex >= 0 ? preferredIndex : 0);
   const current =
     embeddable.length > 0
       ? embeddable[Math.min(activeIndex, embeddable.length - 1)]
