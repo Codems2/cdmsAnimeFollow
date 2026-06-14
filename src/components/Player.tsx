@@ -174,6 +174,11 @@ export function Player({
             className="absolute inset-0 h-full w-full"
             allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
             allowFullScreen
+            // `sandbox` sin `allow-popups` ni `allow-top-navigation` corta los
+            // popunders y los secuestros de pestaña de los anuncios del host,
+            // dejando solo lo que el reproductor necesita para funcionar.
+            // Nota: algún host podría romperse; en ese caso, ajustar estos flags.
+            sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-orientation-lock allow-pointer-lock"
           />
 
           {resolution.status === "loading" && (
