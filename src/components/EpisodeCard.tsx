@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { animeSlugFromEpisode, type FlvLatestEpisode } from "@/types/animeflv";
+import type { FlvLatestEpisode } from "@/types/animeflv";
 
 export function EpisodeCard({
   episode,
@@ -9,7 +9,7 @@ export function EpisodeCard({
   episode: FlvLatestEpisode;
   index?: number;
 }) {
-  const animeSlug = animeSlugFromEpisode(episode.slug, episode.number);
+  const animeSlug = episode.slug;
 
   return (
     <Link

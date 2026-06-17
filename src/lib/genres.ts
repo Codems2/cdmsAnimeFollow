@@ -1,6 +1,6 @@
-// Catálogos de filtros de AnimeFLV para la página Explorar.
+// Catálogos de filtros de AnimeAV1 para la página Explorar.
 
-/** Convierte un nombre de género de AnimeFLV a su slug (sin acentos, en kebab). */
+/** Convierte un nombre de género a su slug (sin acentos, en kebab). */
 export function genreToSlug(name: string): string {
   return name
     .toLowerCase()
@@ -15,55 +15,62 @@ export interface Option {
   label: string;
 }
 
+// Géneros de AnimeAV1 (slug → etiqueta). Ordenados alfabéticamente.
 export const GENRES: Option[] = [
   ["accion", "Acción"],
+  ["antropomorfico", "Antropomórfico"],
   ["artes-marciales", "Artes Marciales"],
   ["aventura", "Aventura"],
   ["carreras", "Carreras"],
   ["ciencia-ficcion", "Ciencia Ficción"],
   ["comedia", "Comedia"],
-  ["demencia", "Demencia"],
-  ["demonios", "Demonios"],
   ["deportes", "Deportes"],
+  ["detectives", "Detectives"],
   ["drama", "Drama"],
   ["ecchi", "Ecchi"],
+  ["elenco-adulto", "Elenco Adulto"],
   ["escolares", "Escolares"],
   ["espacial", "Espacial"],
   ["fantasia", "Fantasía"],
+  ["gore", "Gore"],
+  ["gourmet", "Gourmet"],
   ["harem", "Harem"],
   ["historico", "Histórico"],
+  ["idols-hombre", "Idols (Hombre)"],
+  ["idols-mujer", "Idols (Mujer)"],
   ["infantil", "Infantil"],
+  ["isekai", "Isekai"],
   ["josei", "Josei"],
-  ["juegos", "Juegos"],
-  ["magia", "Magia"],
+  ["juegos-estrategia", "Juegos Estrategia"],
+  ["mahou-shoujo", "Mahou Shoujo"],
   ["mecha", "Mecha"],
   ["militar", "Militar"],
   ["misterio", "Misterio"],
+  ["mitologia", "Mitología"],
   ["musica", "Música"],
   ["parodia", "Parodia"],
-  ["policia", "Policía"],
   ["psicologico", "Psicológico"],
-  ["recuentos-de-la-vida", "Recuentos de la vida"],
+  ["recuentos-de-la-vida", "Recuentos de la Vida"],
   ["romance", "Romance"],
   ["samurai", "Samurai"],
   ["seinen", "Seinen"],
   ["shoujo", "Shoujo"],
+  ["shoujo-ai", "Shoujo Ai"],
   ["shounen", "Shounen"],
+  ["shounen-ai", "Shounen Ai"],
   ["sobrenatural", "Sobrenatural"],
   ["superpoderes", "Superpoderes"],
   ["suspenso", "Suspenso"],
   ["terror", "Terror"],
   ["vampiros", "Vampiros"],
-  ["yaoi", "Yaoi"],
-  ["yuri", "Yuri"],
 ].map(([value, label]) => ({ value, label }));
 
+// Categorías de AnimeAV1 (el filtro `category` del catálogo usa estos slugs).
 export const TYPES: Option[] = [
-  { value: "tv", label: "TV" },
-  { value: "movie", label: "Película" },
-  { value: "special", label: "Especial" },
+  { value: "tv-anime", label: "TV" },
+  { value: "pelicula", label: "Película" },
   { value: "ova", label: "OVA" },
-  { value: "ona", label: "ONA" },
+  { value: "especial", label: "Especial" },
 ];
 
 export const STATUSES: Option[] = [

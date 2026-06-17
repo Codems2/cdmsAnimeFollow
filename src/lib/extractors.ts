@@ -1,6 +1,6 @@
 // Extractores de stream directo a partir de la URL de `embed` de cada host.
 //
-// El reproductor de AnimeFLV solo nos da un iframe (`embed`) de un host externo.
+// El reproductor de AnimeAV1 solo nos da un iframe (`embed`) de un host externo.
 // Para poder usar un <video> nativo (y así lanzar a Chromecast / AirPlay) hace
 // falta la URL directa del .mp4 / .m3u8, que vive dentro de ese iframe ajeno.
 //
@@ -106,7 +106,26 @@ const streamtape: Extractor = {
   },
 };
 
-const EXTRACTORS: Extractor[] = [yourupload, streamtape];
+// ── HLS de AnimeAV1 (player.zilla-networks.com) ─────────────────────────────
+// Es el servidor "HLS" que sirve AnimeAV1: un player propio cuyo manifiesto vive
+// en `/m3u8/{id}` (los segmentos van disfrazados de `.html`). Se sirve con CORS
+// abierto y sin exigir Referer, así que es la mejor opción para el reproductor
+// nativo (sin anuncios) y para lanzar a Chromecast/AirPlay.
+const zillaHls: Extractor = {
+  id: "HLS",
+  match: (e) => /player\.zilla-networks\.com\/play\//i.test(e),
+  async resolve(embed) {
+    const id = embed.match(/\/play\/([a-z0-9]+)/i)?.[1];
+    if (!id) return null;
+    const url = `https://player.zilla-networks.com/m3u8/${id}`;
+    // Comprobamos que el manifiesto existe antes de comprometernos al nativo.
+    const manifest = await fetchText(url);
+    if (!/#EXTM3U/.test(manifest)) return null;
+    return { url, type: "hls" };
+  },
+};
+
+const EXTRACTORS: Extractor[] = [zillaHls, yourupload, streamtape];
 
 /**
  * Intenta resolver la URL de embed a un stream directo reproducible.
