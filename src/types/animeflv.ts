@@ -1,4 +1,5 @@
-// Modelos de la API no oficial de AnimeFLV (ahmedrangel/animeflv-api).
+// Modelos de dominio del reproductor. Los datos provienen de AnimeAV1
+// (animeav1.com); `src/lib/animeflv.ts` los adapta a estas formas.
 
 /** Un episodio dentro de la ficha de un anime. */
 export interface FlvEpisode {
@@ -63,15 +64,4 @@ export interface FlvOnAir {
   type: string | null;
   slug: string;
   url: string;
-}
-
-/**
- * Deriva el slug del anime a partir del slug de un episodio.
- * AnimeFLV nombra los episodios como `{anime-slug}-{number}`.
- */
-export function animeSlugFromEpisode(episodeSlug: string, number: number): string {
-  const suffix = `-${number}`;
-  return episodeSlug.endsWith(suffix)
-    ? episodeSlug.slice(0, -suffix.length)
-    : episodeSlug;
 }

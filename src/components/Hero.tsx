@@ -1,10 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import { animeSlugFromEpisode, type FlvLatestEpisode } from "@/types/animeflv";
+import type { FlvLatestEpisode } from "@/types/animeflv";
 
 /** Banner destacado a partir del último episodio publicado. */
 export function Hero({ episode }: { episode: FlvLatestEpisode }) {
-  const animeSlug = animeSlugFromEpisode(episode.slug, episode.number);
+  const animeSlug = episode.slug;
 
   return (
     <Link
