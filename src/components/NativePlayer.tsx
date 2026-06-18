@@ -53,6 +53,11 @@ export function NativePlayer({
   const [castReady, setCastReady] = useState(false);
   const [casting, setCasting] = useState(false);
   const [airplayAvailable, setAirplayAvailable] = useState(false);
+  // Remote Playback API: el mecanismo de casting nativo del <video> en Chrome
+  // de Android (donde el SDK de Cast puede no ofrecer botón). No funciona con
+  // fuentes MSE (HLS via hls.js → blob:), así que solo estará disponible para
+  // streams con URL directa (mp4 progresivo).
+  const [remoteAvailable, setRemoteAvailable] = useState(false);
 
   const contentType = stream.type === "hls" ? "application/x-mpegURL" : "video/mp4";
 
@@ -160,7 +165,7 @@ export function NativePlayer({
     });
   }, []);
 
-  const startCast = useCallback(async () => {
+  const startCastFramework = useCallback(async () => {
     const cc = window.chrome?.cast;
     const fw = window.cast?.framework;
     if (!cc || !fw) return;
@@ -176,6 +181,53 @@ export function NativePlayer({
       /* el usuario canceló o no hay dispositivos */
     }
   }, [playSrc, contentType]);
+
+  // ── Remote Playback API (Chrome Android / escritorio) ─────────────────────
+  // Vigila si hay dispositivos compatibles para mostrar el botón y reacciona a
+  // la conexión. Para fuentes MSE (HLS) la API no expone disponibilidad, así que
+  // el botón simplemente no aparece y se recurre a Cast (CAF) o al iframe.
+  useEffect(() => {
+    const video = videoRef.current;
+    const remote = video?.remote;
+    if (!remote) return;
+    let watchId: number | undefined;
+    let cancelled = false;
+
+    remote
+      .watchAvailability((available) => {
+        if (!cancelled) setRemoteAvailable(available);
+      })
+      .then((id) => {
+        watchId = id;
+      })
+      .catch(() => setRemoteAvailable(false));
+
+    const onConnect = () => setCasting(true);
+    const onDisconnect = () => setCasting(false);
+    remote.addEventListener("connect", onConnect);
+    remote.addEventListener("disconnect", onDisconnect);
+
+    return () => {
+      cancelled = true;
+      if (watchId !== undefined) {
+        remote.cancelWatchAvailability(watchId).catch(() => {});
+      }
+      remote.removeEventListener("connect", onConnect);
+      remote.removeEventListener("disconnect", onDisconnect);
+    };
+  }, [playSrc]);
+
+  // Lanza usando el mejor mecanismo disponible: CAF (sabe enviar la URL del
+  // stream, también HLS) y, si no, la Remote Playback API del propio <video>.
+  const startCast = useCallback(() => {
+    if (castReady) {
+      void startCastFramework();
+      return;
+    }
+    videoRef.current?.remote?.prompt().catch(() => {
+      /* el usuario canceló o no hay dispositivos */
+    });
+  }, [castReady, startCastFramework]);
 
   // ── AirPlay (Safari) ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -219,7 +271,7 @@ export function NativePlayer({
         />
 
         <div className="absolute right-3 top-3 z-10 flex gap-2">
-          {castReady && (
+          {(castReady || (remoteAvailable && !airplayAvailable)) && (
             <button
               type="button"
               onClick={startCast}
